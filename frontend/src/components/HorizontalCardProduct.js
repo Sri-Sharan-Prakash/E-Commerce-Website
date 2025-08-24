@@ -74,7 +74,6 @@ const ProductCard = ({ product, onAddToCart }) => {
 };
 
 
-// --- Main Component ---
 
 const HorizontalCardProduct = ({ category, heading }) => {
     const [data, setData] = useState([]);
@@ -83,8 +82,8 @@ const HorizontalCardProduct = ({ category, heading }) => {
     const { fetchUserAddToCart } = useContext(Context);
 
     const handleAddToCart = async (e, id) => {
-        e.preventDefault(); // Prevent Link navigation
-        e.stopPropagation(); // Stop event bubbling
+        e.preventDefault();
+        e.stopPropagation();
         await addToCart(e, id);
         fetchUserAddToCart();
     };
@@ -129,7 +128,6 @@ const HorizontalCardProduct = ({ category, heading }) => {
                     }
                 </div>
 
-                {/* Desktop Navigation Buttons */}
                 {!loading && data.length > 4 && (
                     <>
                         <button  className='bg-white shadow-lg rounded-full p-2 w-10 h-10 absolute left-0 top-1/2 -translate-y-1/2 text-lg hidden md:flex justify-center items-center hover:bg-slate-100 transition-colors' onClick={scrollLeft} aria-label="Scroll left">

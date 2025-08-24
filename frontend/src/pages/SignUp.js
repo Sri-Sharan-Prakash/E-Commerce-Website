@@ -1,194 +1,191 @@
-import React, { useState } from 'react'
-import loginIcons from '../assest/signin.gif'
-import { FaEye } from "react-icons/fa";
-import { FaEyeSlash } from "react-icons/fa";
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { FaEye, FaEyeSlash, FaUser, FaEnvelope, FaLock, FaSpinner, FaCamera } from "react-icons/fa";
+
 import imageTobase64 from '../helpers/imageTobase64';
 import SummaryApi from '../common';
-import { toast } from 'react-toastify';
 
 const SignUp = () => {
-  const [showPassword,setShowPassword] = useState(false)
-  const [showConfirmPassword,setShowConfirmPassword] = useState(false)
-  const [data,setData] = useState({
-      email : "",
-      password : "",
-      name : "",
-      confirmPassword : "",
-      profilePic : "",
-  })
-  const navigate = useNavigate()
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [data, setData] = useState({
+        email: "",
+        password: "",
+        name: "",
+        confirmPassword: "",
+        profilePic: "",
+    });
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-  const handleOnChange = (e) =>{
-      const { name , value } = e.target
+    const handleOnChange = (e) => {
+        const { name, value } = e.target;
+        setData((prev) => ({ ...prev, [name]: value }));
+    };
 
-      setData((preve)=>{
-          return{
-              ...preve,
-              [name] : value
-          }
-      })
-  }
+    const handleUploadPic = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const imagePic = await imageTobase64(file);
+            setData((prev) => ({ ...prev, profilePic: imagePic }));
+        }
+    };
 
-  const handleUploadPic = async(e) =>{
-    const file = e.target.files[0]
-    
-    const imagePic = await imageTobase64(file)
-    
-    setData((preve)=>{
-      return{
-        ...preve,
-        profilePic : imagePic
-      }
-    })
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (data.password !== data.confirmPassword) {
+            toast.error("Passwords do not match. Please check and try again.");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const dataResponse = await fetch(SummaryApi.signUP.url, {
+                method: SummaryApi.signUP.method,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(data)
+            });
+            const dataApi = await dataResponse.json();
 
-  }
+            if (dataApi.success) {
+                toast.success(dataApi.message);
+                navigate("/login");
+            } else {
+                toast.error(dataApi.message);
+            }
+        } catch (error) {
+            toast.error("An unexpected error occurred. Please try again.");
+            console.error("Signup Error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    return (
+        <section className='min-h-[calc(100vh-120px)] flex items-center justify-center bg-slate-100 p-4'>
+            <div className='bg-white w-full max-w-md rounded-2xl shadow-lg p-8 animate-fade-in-up'>
+                <div className='text-center mb-6'>
+                    <h2 className='text-3xl font-bold text-slate-800'>Create an Account</h2>
+                    <p className='text-slate-500 mt-2'>Join us and start shopping!</p>
+                </div>
 
-  const handleSubmit = async(e) =>{
-      e.preventDefault()
-
-      if(data.password === data.confirmPassword){
-
-        const dataResponse = await fetch(SummaryApi.signUP.url,{
-            method : SummaryApi.signUP.method,
-            headers : {
-                "content-type" : "application/json"
-            },
-            body : JSON.stringify(data)
-          })
-    
-          const dataApi = await dataResponse.json()
-
-          if(dataApi.success){
-            toast.success(dataApi.message)
-            navigate("/login")
-          }
-
-          if(dataApi.error){
-            toast.error(dataApi.message)
-          }
-    
-      }else{
-        toast.error("Please check password and confirm password")
-      }
-
-  }
-
-  return (
-    <section id='signup'>
-        <div className='mx-auto container p-4'>
-
-            <div className='bg-white p-5 w-full max-w-sm mx-auto'>
-
-                    <div className='w-20 h-20 mx-auto relative overflow-hidden rounded-full'>
-                        <div>
-                            <img src={data.profilePic || loginIcons} alt='login icons'/>
-                        </div>
-                        <form>
-                          <label>
-                            <div className='text-xs bg-opacity-80 bg-slate-200 pb-4 pt-2 cursor-pointer text-center absolute bottom-0 w-full'>
-                              Upload  Photo
+                <form onSubmit={handleSubmit} className='space-y-5'>
+                    {/* Profile Picture Upload */}
+                    <div className='flex justify-center'>
+                        <label htmlFor='profilePic' className='relative w-24 h-24 rounded-full group cursor-pointer'>
+                            {data.profilePic?
+                            <img 
+                                src={data.profilePic} 
+                                alt='Profile' 
+                                className='w-full h-full object-cover rounded-full border-2 border-slate-200'
+                            />:<FaUser size={85}/>}
+                            <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity'>
+                                <FaCamera className='text-white text-2xl opacity-0 group-hover:opacity-100 transition-opacity' />
                             </div>
-                            <input type='file' className='hidden' onChange={handleUploadPic}/>
-                          </label>
-                        </form>
+                            <input type='file' id='profilePic' className='hidden' onChange={handleUploadPic} accept="image/*" />
+                        </label>
                     </div>
 
-                    <form className='pt-6 flex flex-col gap-2' onSubmit={handleSubmit}>
-                      <div className='grid'>
-                              <label>Name : </label>
-                              <div className='bg-slate-100 p-2'>
-                                  <input 
-                                      type='text' 
-                                      placeholder='enter your name' 
-                                      name='name'
-                                      value={data.name}
-                                      onChange={handleOnChange}
-                                      required
-                                      className='w-full h-full outline-none bg-transparent'/>
-                              </div>
-                          </div>
-                        <div className='grid'>
-                            <label>Email : </label>
-                            <div className='bg-slate-100 p-2'>
-                                <input 
-                                    type='email' 
-                                    placeholder='enter email' 
-                                    name='email'
-                                    value={data.email}
-                                    onChange={handleOnChange}
-                                    required
-                                    className='w-full h-full outline-none bg-transparent'/>
-                            </div>
+                    {/* Form Inputs */}
+                    <div>
+                        <label className='block text-sm font-medium text-slate-700'>Full Name</label>
+                        <div className='relative mt-1'>
+                            <span className='absolute inset-y-0 left-0 flex items-center pl-3'>
+                                <FaUser className='h-5 w-5 text-slate-400' />
+                            </span>
+                            <input 
+                                type='text' 
+                                name='name' 
+                                value={data.name} 
+                                onChange={handleOnChange} 
+                                placeholder='Your Name' 
+                                className='w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500' 
+                                required 
+                            />
                         </div>
-
-                        <div>
-                            <label>Password : </label>
-                            <div className='bg-slate-100 p-2 flex'>
-                                <input 
-                                    type={showPassword ? "text" : "password"} 
-                                    placeholder='enter password'
-                                    value={data.password}
-                                    name='password' 
-                                    onChange={handleOnChange}
-                                    required
-                                    className='w-full h-full outline-none bg-transparent'/>
-                                <div className='cursor-pointer text-xl' onClick={()=>setShowPassword((preve)=>!preve)}>
-                                    <span>
-                                        {
-                                            showPassword ? (
-                                                <FaEyeSlash/>
-                                            )
-                                            :
-                                            (
-                                                <FaEye/>
-                                            )
-                                        }
-                                    </span>
-                                </div>
-                            </div>
+                    </div>
+                    <div>
+                        <label className='block text-sm font-medium text-slate-700'>Email Address</label>
+                        <div className='relative mt-1'>
+                            <span className='absolute inset-y-0 left-0 flex items-center pl-3'>
+                                <FaEnvelope className='h-5 w-5 text-slate-400' />
+                            </span>
+                            <input 
+                                type='email' 
+                                name='email' 
+                                value={data.email} 
+                                onChange={handleOnChange} 
+                                placeholder='you@example.com' 
+                                className='w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500' 
+                                required 
+                            />
                         </div>
-
-                        <div>
-                            <label>Confirm Password : </label>
-                            <div className='bg-slate-100 p-2 flex'>
-                                <input 
-                                    type={showConfirmPassword ? "text" : "password"} 
-                                    placeholder='enter confirm password'
-                                    value={data.confirmPassword}
-                                    name='confirmPassword' 
-                                    onChange={handleOnChange}
-                                    required
-                                    className='w-full h-full outline-none bg-transparent'/>
-
-                                <div className='cursor-pointer text-xl' onClick={()=>setShowConfirmPassword((preve)=>!preve)}>
-                                    <span>
-                                        {
-                                            showConfirmPassword ? (
-                                                <FaEyeSlash/>
-                                            )
-                                            :
-                                            (
-                                                <FaEye/>
-                                            )
-                                        }
-                                    </span>
-                                </div>
-                            </div>
+                    </div>
+                    <div>
+                        <label className='block text-sm font-medium text-slate-700'>Password</label>
+                        <div className='relative mt-1'>
+                            <span className='absolute inset-y-0 left-0 flex items-center pl-3'>
+                                <FaLock className='h-5 w-5 text-slate-400' />
+                            </span>
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                name='password' 
+                                value={data.password} 
+                                onChange={handleOnChange} 
+                                placeholder='Your Password' 
+                                className='w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500' 
+                                required 
+                            />
+                            <button 
+                                type='button' 
+                                className='absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500' 
+                                onClick={() => setShowPassword(p => !p)}
+                            >
+                                {showPassword ? <FaEyeSlash size={20}/> : <FaEye size={20}/>}
+                            </button>
                         </div>
+                    </div>
+                    <div>
+                        <label className='block text-sm font-medium text-slate-700'>Confirm Password</label>
+                        <div className='relative mt-1'>
+                            <span className='absolute inset-y-0 left-0 flex items-center pl-3'>
+                                <FaLock className='h-5 w-5 text-slate-400' />
+                            </span>
+                            <input 
+                                type={showConfirmPassword ? "text" : "password"} 
+                                name='confirmPassword' 
+                                value={data.confirmPassword} 
+                                onChange={handleOnChange} 
+                                placeholder='Confirm Your Password' 
+                                className='w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500' 
+                                required 
+                            />
+                            <button 
+                                type='button' 
+                                className='absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500' 
+                                onClick={() => setShowConfirmPassword(p => !p)}
+                            >
+                                {showConfirmPassword ? <FaEyeSlash size={20}/> : <FaEye size={20}/>}
+                            </button>
+                        </div>
+                    </div>
 
-                        <button className='bg-red-600 hover:bg-red-700 text-white px-6 py-2 w-full max-w-[150px] rounded-full hover:scale-110 transition-all mx-auto block mt-6'>Sign Up</button>
+                    <button
+                        type='submit'
+                        className='w-full flex justify-center py-3 px-4 mt-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed'
+                        disabled={loading}
+                    >
+                        {loading ? <FaSpinner className='animate-spin' size={20}/> : 'Sign Up'}
+                    </button>
+                </form>
 
-                    </form>
-
-                    <p className='my-5'>Already have account ? <Link to={"/login"} className=' text-red-600 hover:text-red-700 hover:underline'>Login</Link></p>
+                <p className='text-center text-sm text-slate-600 mt-8'>
+                    Already have an account? <Link to={"/login"} className='font-medium text-red-600 hover:underline'>Login</Link>
+                </p>
             </div>
-
-
-        </div>
-    </section>
-  )
+        </section>
+    )
 }
 
-export default SignUp
+export default SignUp;

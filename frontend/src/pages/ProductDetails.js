@@ -1,236 +1,188 @@
-import React, { useCallback, useContext, useEffect, useState } from 'react'
-import  { useNavigate, useParams } from 'react-router-dom'
-import SummaryApi from '../common'
-import { FaStar } from "react-icons/fa";
-import { FaStarHalf } from "react-icons/fa";
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { FaStar, FaShoppingCart, FaCreditCard, FaPlus, FaMinus } from "react-icons/fa";
+import { IoMdClose } from "react-icons/io";
+import { toast } from 'react-toastify';
+
+import SummaryApi from '../common';
 import displayINRCurrency from '../helpers/displayCurrency';
-import VerticalCardProduct from '../components/VerticalCardProduct';
-import CategroyWiseProductDisplay from '../components/CategoryWiseProductDisplay';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
+import CategroyWiseProductDisplay from '../components/CategoryWiseProductDisplay';
+
+// --- Reusable Sub-components for a Clean Structure ---
+
+const Breadcrumbs = ({ category, productName }) => (
+    <nav className="text-sm text-slate-500 mb-4 flex items-center gap-2">
+        <Link to="/" className="hover:text-red-500">Home</Link>
+        <span>/</span>
+        <Link to={`/product-category?category=${category}`} className="hover:text-red-500 capitalize">{category}</Link>
+        <span>/</span>
+        <span className="font-semibold text-slate-700 truncate">{productName}</span>
+    </nav>
+);
+
+const Lightbox = ({ imageUrl, onClose }) => {
+    useEffect(() => {
+        const handleKeyDown = (e) => e.key === 'Escape' && onClose();
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center animate-fade-in" onClick={onClose}>
+            <button className="absolute top-4 right-4 text-white text-3xl p-2 z-50" onClick={onClose}><IoMdClose /></button>
+            <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                <img src={imageUrl} alt="Full screen product view" className="object-contain w-full h-full animate-zoom-in" />
+            </div>
+        </div>
+    );
+};
+
+const ProductDetailsSkeleton = () => (
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 animate-pulse'>
+        <div className='flex flex-col-reverse md:flex-row gap-4'>
+            <div className='flex md:flex-col gap-2'>{Array.from({ length: 4 }).map((_, i) => <div key={i} className='w-20 h-20 bg-slate-200 rounded-md flex-shrink-0'></div>)}</div>
+            <div className='w-full h-80 md:h-auto bg-slate-200 rounded-lg'></div>
+        </div>
+        <div className='flex flex-col gap-4'>
+            <div className='h-6 w-1/4 bg-slate-200 rounded-full'></div>
+            <div className='h-10 w-full bg-slate-200 rounded-lg'></div>
+            <div className='h-6 w-1/3 bg-slate-200 rounded-full'></div>
+            <div className='flex gap-8 items-center'><div className='h-8 w-1/2 bg-slate-200 rounded-lg'></div><div className='h-8 w-1/4 bg-slate-200 rounded-lg'></div></div>
+            <div className='flex gap-4 my-2'><div className='h-12 w-36 bg-slate-200 rounded-lg'></div><div className='h-12 w-36 bg-slate-200 rounded-lg'></div></div>
+            <div className='space-y-3 mt-4'><div className='h-4 w-full bg-slate-200 rounded'></div><div className='h-4 w-full bg-slate-200 rounded'></div><div className='h-4 w-3/4 bg-slate-200 rounded'></div></div>
+        </div>
+    </div>
+);
+
 
 const ProductDetails = () => {
-  const [data,setData] = useState({
-    productName : "",
-    brandName : "",
-    category : "",
-    productImage : [],
-    description : "",
-    price : "",
-    sellingPrice : ""
-  })
-  const params = useParams()
-  const [loading,setLoading] = useState(true)
-  const productImageListLoading = new Array(4).fill(null)
-  const [activeImage,setActiveImage] = useState("")
+    const [data, setData] = useState(null);
+    const { id: productId } = useParams();
+    const [loading, setLoading] = useState(true);
+    const [activeImage, setActiveImage] = useState("");
+    const [quantity, setQuantity] = useState(1);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const { fetchUserAddToCart } = useContext(Context);
+    const navigate = useNavigate();
 
-  const [zoomImageCoordinate,setZoomImageCoordinate] = useState({
-    x : 0,
-    y : 0
-  })
-  const [zoomImage,setZoomImage] = useState(false)
+    const fetchProductDetails = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(SummaryApi.productDetails.url, {
+                method: SummaryApi.productDetails.method,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ productId }),
+            });
+            const dataResponse = await response.json();
+            if (dataResponse.success) {
+                setData(dataResponse.data);
+                setActiveImage(dataResponse.data.productImage[0]);
+            } else {
+                toast.error(dataResponse.message);
+                setData(null); // Set data to null if product not found
+            }
+        } catch (error) {
+            toast.error("An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    }, [productId]);
 
-  const { fetchUserAddToCart } = useContext(Context)
+    useEffect(() => {
+        fetchProductDetails();
+    }, [fetchProductDetails]);
 
-  const navigate = useNavigate()
+    const handleAddToCart = async (id) => {
+        await addToCart({ preventDefault: () => {} }, id, quantity);
+        fetchUserAddToCart();
+    };
 
-  const fetchProductDetails = async()=>{
-    setLoading(true)
-    const response = await fetch(SummaryApi.productDetails.url,{
-      method : SummaryApi.productDetails.method,
-      headers : {
-        "content-type" : "application/json"
-      },
-      body : JSON.stringify({
-        productId : params?.id
-      })
-    })
-    setLoading(false)
-    const dataReponse = await response.json()
+    const handleBuyProduct = async (id) => {
+        await addToCart({ preventDefault: () => {} }, id, quantity);
+        fetchUserAddToCart();
+        navigate("/cart");
+    };
 
-    setData(dataReponse?.data)
-    setActiveImage(dataReponse?.data?.productImage[0])
+    if (loading) {
+        return <div className='container mx-auto p-4 md:p-8'><ProductDetailsSkeleton /></div>;
+    }
 
-  }
-
-  console.log("data",data)
-
-  useEffect(()=>{
-    fetchProductDetails()
-  },[params])
-
-  const handleMouseEnterProduct = (imageURL)=>{
-    setActiveImage(imageURL)
-  }
-
-  const handleZoomImage = useCallback((e) =>{
-    setZoomImage(true)
-    const { left , top, width , height } = e.target.getBoundingClientRect()
-    console.log("coordinate", left, top , width , height)
-
-    const x = (e.clientX - left) / width
-    const y = (e.clientY - top) / height
-
-    setZoomImageCoordinate({
-      x,
-      y
-    })
-  },[zoomImageCoordinate])
-
-  const handleLeaveImageZoom = ()=>{
-    setZoomImage(false)
-  }
-
-
-  const handleAddToCart = async(e,id) =>{
-    await addToCart(e,id)
-    fetchUserAddToCart()
-  }
-
-  const handleBuyProduct = async(e,id)=>{
-    await addToCart(e,id)
-    fetchUserAddToCart()
-    navigate("/cart")
-
-  }
-
-  return (
-    <div className='container mx-auto p-4'>
-
-      <div className='min-h-[200px] flex flex-col lg:flex-row gap-4'>
-          {/***product Image */}
-          <div className='h-96 flex flex-col lg:flex-row-reverse gap-4'>
-
-              <div className='h-[300px] w-[300px] lg:h-96 lg:w-96 bg-slate-200 relative p-2'>
-                  <img src={activeImage} className='h-full w-full object-scale-down mix-blend-multiply' onMouseMove={handleZoomImage} onMouseLeave={handleLeaveImageZoom}/>
-
-                    {/**product zoom */}
-                    {
-                      zoomImage && (
-                        <div className='hidden lg:block absolute min-w-[500px] overflow-hidden min-h-[400px] bg-slate-200 p-1 -right-[510px] top-0'>
-                          <div
-                            className='w-full h-full min-h-[400px] min-w-[500px] mix-blend-multiply scale-150'
-                            style={{
-                              background : `url(${activeImage})`,
-                              backgroundRepeat : 'no-repeat',
-                              backgroundPosition : `${zoomImageCoordinate.x * 100}% ${zoomImageCoordinate.y * 100}% `
+    if (!data) {
+        return <div className="container mx-auto p-8 text-center text-xl text-slate-500">Product not found.</div>;
+    }
     
-                            }}
-                          >
-    
-                          </div>
+    const discount = data.price > 0 ? Math.round(((data.price - data.sellingPrice) / data.price) * 100) : 0;
+
+    return (
+        <main className='container mx-auto p-4 md:p-8'>
+            {lightboxOpen && <Lightbox imageUrl={activeImage} onClose={() => setLightboxOpen(false)} />}
+            
+            <Breadcrumbs category={data.category} productName={data.productName} />
+
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12'>
+                {/* --- Image Gallery --- */}
+                <div className='flex flex-col-reverse md:flex-row gap-4'>
+                    <div className='flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto scrollbar-none'>
+                        {data.productImage.map((imgURL) => (
+                            <div key={imgURL} className={`w-20 h-20 bg-slate-100 rounded-md flex-shrink-0 p-1 cursor-pointer ${activeImage === imgURL ? 'border-2 border-red-500' : 'border-2 border-transparent'}`} onMouseEnter={() => setActiveImage(imgURL)}>
+                                <img src={imgURL} className='w-full h-full object-contain' alt="thumbnail" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className='w-full h-80 md:h-auto bg-slate-100 rounded-lg flex justify-center items-center cursor-pointer' onClick={() => setLightboxOpen(true)}>
+                        <img src={activeImage} className='h-full max-h-[450px] w-full object-contain mix-blend-multiply' alt={data.productName} />
+                    </div>
+                </div>
+
+                {/* --- Product Details --- */}
+                <div className='flex flex-col'>
+                    <span className='bg-red-100 text-red-600 px-3 py-1 text-sm rounded-full inline-block w-fit font-semibold'>{data.brandName}</span>
+                    <h1 className='text-3xl lg:text-4xl font-bold text-slate-800 mt-2'>{data.productName}</h1>
+                    <div className='flex items-center gap-4 mt-2'>
+                        <div className='flex items-center gap-1 text-yellow-400'><FaStar /><FaStar /><FaStar /><FaStar /><FaStar /></div>
+                        <a href="#reviews" className='text-sm text-slate-500 hover:underline'>(125 reviews)</a>
+                    </div>
+
+                    <div className='flex items-baseline gap-3 my-4'>
+                        <p className='text-3xl font-bold text-red-600'>{displayINRCurrency(data.sellingPrice)}</p>
+                        <p className='text-xl text-slate-400 line-through'>{displayINRCurrency(data.price)}</p>
+                        {discount > 0 && <span className='text-lg font-semibold text-green-600'>({discount}% OFF)</span>}
+                    </div>
+
+                    <div className='flex items-center gap-4 my-3'>
+                        <div className='font-semibold text-slate-700'>Quantity:</div>
+                        <div className='flex items-center border rounded-lg'>
+                            <button className='w-10 h-10 flex items-center justify-center hover:bg-slate-100 rounded-l-lg' onClick={() => setQuantity(q => Math.max(1, q - 1))}><FaMinus /></button>
+                            <span className='w-10 h-10 flex items-center justify-center font-semibold'>{quantity}</span>
+                            <button className='w-10 h-10 flex items-center justify-center hover:bg-slate-100 rounded-r-lg' onClick={() => setQuantity(q => q + 1)}><FaPlus /></button>
                         </div>
-                      )
-                    }
-                  
-              </div>
+                    </div>
 
-              <div className='h-full'>
-                  {
-                    loading ? (
-                      <div className='flex gap-2 lg:flex-col overflow-scroll scrollbar-none h-full'>
-                        {
-                          productImageListLoading.map((el,index) =>{
-                            return(
-                              <div className='h-20 w-20 bg-slate-200 rounded animate-pulse' key={"loadingImage"+index}>
-                              </div>
-                            )
-                          })
-                        }
-                      </div>
-                      
-                    ) : (
-                      <div className='flex gap-2 lg:flex-col overflow-scroll scrollbar-none h-full'>
-                        {
-                          data?.productImage?.map((imgURL,index) =>{
-                            return(
-                              <div className='h-20 w-20 bg-slate-200 rounded p-1' key={imgURL}>
-                                <img src={imgURL} className='w-full h-full object-scale-down mix-blend-multiply cursor-pointer' onMouseEnter={()=>handleMouseEnterProduct(imgURL)}  onClick={()=>handleMouseEnterProduct(imgURL)}/>
-                              </div>
-                            )
-                          })
-                        }
-                      </div>
-                    )
-                  }
-              </div>
-          </div>
+                    <div className='flex flex-col sm:flex-row items-center gap-3 my-4'>
+                        <button className='w-full sm:w-auto flex items-center justify-center gap-2 border-2 border-red-600 rounded-lg px-6 py-3 font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors' onClick={() => handleAddToCart(data._id)}>
+                            <FaShoppingCart /> Add To Cart
+                        </button>
+                        <button className='w-full sm:w-auto flex items-center justify-center gap-2 border-2 border-slate-700 rounded-lg px-6 py-3 font-semibold text-slate-700 hover:bg-slate-700 hover:text-white transition-colors' onClick={() => handleBuyProduct(data._id)}>
+                            <FaCreditCard /> Buy Now
+                        </button>
+                    </div>
 
-           {/***product details */}
-           {
-            loading ? (
-              <div className='grid gap-1 w-full'>
-                <p className='bg-slate-200 animate-pulse  h-6 lg:h-8 w-full rounded-full inline-block'></p>
-                <h2 className='text-2xl lg:text-4xl font-medium h-6 lg:h-8  bg-slate-200 animate-pulse w-full'></h2>
-                <p className='capitalize text-slate-400 bg-slate-200 min-w-[100px] animate-pulse h-6 lg:h-8  w-full'></p>
-
-                <div className='text-red-600 bg-slate-200 h-6 lg:h-8  animate-pulse flex items-center gap-1 w-full'>
-    
+                    <div className='border-t pt-4 mt-4'>
+                        <h3 className='text-lg font-semibold text-slate-700 mb-2'>Description</h3>
+                        <p className='text-slate-600 leading-relaxed'>{data.description}</p>
+                    </div>
                 </div>
+            </div>
 
-                <div className='flex items-center gap-2 text-2xl lg:text-3xl font-medium my-1 h-6 lg:h-8  animate-pulse w-full'>
-                  <p className='text-red-600 bg-slate-200 w-full'></p>
-                  <p className='text-slate-400 line-through bg-slate-200 w-full'></p>
+            {data.category && (
+                <div className='mt-12 lg:mt-20'>
+                    <CategroyWiseProductDisplay category={data.category} heading={"Recommended Products"} />
                 </div>
-
-                <div className='flex items-center gap-3 my-2 w-full'>
-                  <button className='h-6 lg:h-8  bg-slate-200 rounded animate-pulse w-full'></button>
-                  <button className='h-6 lg:h-8  bg-slate-200 rounded animate-pulse w-full'></button>
-                </div>
-
-                <div className='w-full'>
-                  <p className='text-slate-600 font-medium my-1 h-6 lg:h-8   bg-slate-200 rounded animate-pulse w-full'></p>
-                  <p className=' bg-slate-200 rounded animate-pulse h-10 lg:h-12  w-full'></p>
-                </div>
-              </div>
-            ) : 
-            (
-              <div className='flex flex-col gap-1'>
-                <p className='bg-red-200 text-red-600 px-2 rounded-full inline-block w-fit'>{data?.brandName}</p>
-                <h2 className='text-2xl lg:text-4xl font-medium'>{data?.productName}</h2>
-                <p className='capitalize text-slate-400'>{data?.category}</p>
-
-                <div className='text-red-600 flex items-center gap-1'>
-                    <FaStar/>
-                    <FaStar/>
-                    <FaStar/>
-                    <FaStar/>
-                    <FaStarHalf/>
-                </div>
-
-                <div className='flex items-center gap-2 text-2xl lg:text-3xl font-medium my-1'>
-                  <p className='text-red-600'>{displayINRCurrency(data.sellingPrice)}</p>
-                  <p className='text-slate-400 line-through'>{displayINRCurrency(data.price)}</p>
-                </div>
-
-                <div className='flex items-center gap-3 my-2'>
-                  <button className='border-2 border-red-600 rounded px-3 py-1 min-w-[120px] text-red-600 font-medium hover:bg-red-600 hover:text-white' onClick={(e)=>handleBuyProduct(e,data?._id)}>Buy</button>
-                  <button className='border-2 border-red-600 rounded px-3 py-1 min-w-[120px] font-medium text-white bg-red-600 hover:text-red-600 hover:bg-white' onClick={(e)=>handleAddToCart(e,data?._id)}>Add To Cart</button>
-                </div>
-
-                <div>
-                  <p className='text-slate-600 font-medium my-1'>Description : </p>
-                  <p>{data?.description}</p>
-                </div>
-              </div>
-            )
-           }
-
-      </div>
-
-
-
-      {
-        data.category && (
-          <CategroyWiseProductDisplay category={data?.category} heading={"Recommended Product"}/>
-        )
-      }
-     
-
-
-
-    </div>
-  )
+            )}
+        </main>
+    );
 }
 
-export default ProductDetails
+export default ProductDetails;
