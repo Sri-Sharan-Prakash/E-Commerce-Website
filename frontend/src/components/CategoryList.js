@@ -1,54 +1,87 @@
-import React, { useEffect, useState } from 'react'
-import SummaryApi from '../common'
-import { Link } from 'react-router-dom'
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import SummaryApi from '../common';
 
-const CategoryList = () => {
-    const [categoryProduct,setCategoryProduct] = useState([])
-    const [loading,setLoading] = useState(false)
-
-    const categoryLoading = new Array(13).fill(null)
-
-    const fetchCategoryProduct = async() =>{
-        setLoading(true)
-        const response = await fetch(SummaryApi.categoryProduct.url)
-        const dataResponse = await response.json()
-        setLoading(false)
-        setCategoryProduct(dataResponse.data)
-    }
-
-    useEffect(()=>{
-        fetchCategoryProduct()
-    },[])
-
-  return (
-    <div className='container mx-auto p-4'>
-           <div className='flex items-center gap-4 justify-between overflow-scroll scrollbar-none'>
-            {
-
-                loading ? (
-                    categoryLoading.map((el,index)=>{
-                            return(
-                                <div className='h-16 w-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-slate-200 animate-pulse' key={"categoryLoading"+index}>
-                                </div>
-                            )
-                    })  
-                ) :
-                (
-                    categoryProduct.map((product,index)=>{
-                        return(
-                            <Link to={"/product-category?category="+product?.category} className='cursor-pointer' key={product?.category}>
-                                <div className='w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden p-4 bg-slate-200 flex items-center justify-center'>
-                                    <img src={product?.productImage[0]} alt={product?.category} className='h-full object-scale-down mix-blend-multiply hover:scale-125 transition-all'/>
-                                </div>
-                                <p className='text-center text-sm md:text-base capitalize'>{product?.category}</p>
-                            </Link>
-                        )
-                    })
-                )
-            }
-           </div>
+/**
+ * A reusable skeleton component for the loading state.
+ */
+const CategoryLoadingSkeleton = () => (
+    <div className='flex flex-col items-center gap-2'>
+        <div className='w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-slate-200 animate-pulse'></div>
+        <div className='h-4 w-16 bg-slate-200 rounded-md animate-pulse'></div>
     </div>
-  )
+);
+
+/**
+ * The main component to display a list of product categories.
+ */
+const CategoryList = () => {
+    const [categoryProduct, setCategoryProduct] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Using a fixed number for the skeleton array for consistency
+    const loadingSkeletons = Array.from({ length: 10 });
+
+    const fetchCategoryProduct = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(SummaryApi.categoryProduct.url);
+            const dataResponse = await response.json();
+            setCategoryProduct(dataResponse.data);
+        } catch (error) {
+            console.error("Failed to fetch category products:", error);
+            // Optionally, set an error state here to show a message to the user
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCategoryProduct();
+    }, []);
+
+    return (
+        <section className='container mx-auto p-4' aria-labelledby="category-heading">
+            {/* Section Header */}
+            <div className='flex items-center justify-between mb-4'>
+                 <h2 id="category-heading" className='text-2xl font-semibold text-slate-800'>Shop by Category</h2>
+                 {/* Optional: Add a "View All" link here if you have a dedicated categories page */}
+            </div>
+            
+            {/* Category Items Container */}
+            <div className='relative'>
+                 <div className='flex items-center gap-4 md:gap-8 overflow-x-scroll scrollbar-none py-4'>
+                    {loading
+                        ? (
+                            loadingSkeletons.map((_, index) => (
+                                <CategoryLoadingSkeleton key={`categoryLoading-${index}`} />
+                            ))
+                        )
+                        : (
+                            categoryProduct.map((product) => (
+                                <Link
+                                    to={`/product-category?category=${product?.category}`}
+                                    className='flex-shrink-0 group'
+                                    key={product?.category}
+                                >
+                                    <div className='w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden p-3 bg-slate-100 border border-slate-200 flex items-center justify-center transition-all duration-300 group-hover:bg-white group-hover:shadow-md group-hover:-translate-y-1'>
+                                        <img
+                                            src={product?.productImage[0]}
+                                            alt={product?.category}
+                                            className='h-full w-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-110'
+                                        />
+                                    </div>
+                                    <p className='text-center text-sm md:text-base capitalize mt-2 font-medium text-slate-700 group-hover:text-red-600 transition-colors'>
+                                        {product?.category}
+                                    </p>
+                                </Link>
+                            ))
+                        )
+                    }
+                 </div>
+            </div>
+        </section>
+    );
 }
 
-export default CategoryList
+export default CategoryList;
