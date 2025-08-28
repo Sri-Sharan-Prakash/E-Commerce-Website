@@ -1,2 +1,2 @@
-# Full-Stack-E-Commerce-MERN-APP
-Full Stack E-Commerce MERN APP
+# E-Commerce Website
+Full Stack Webapp using MERN
