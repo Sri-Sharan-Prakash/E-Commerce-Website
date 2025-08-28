@@ -40,7 +40,7 @@ const BannerProduct = () => {
 
     return (
         <div className='container mx-auto px-4 rounded mt-4'>
-            <div className='h-56 md:h-72 w-full bg-slate-200 relative overflow-hidden rounded-lg'>
+            <div className='h-56 md:h-[420px] w-full bg-slate-200 relative overflow-hidden rounded-lg'>
                 
                 {/* Image container for sliding effect */}
                 <div className='w-full h-full flex transition-transform duration-500 ease-in-out' style={{ transform: `translateX(-${currentImage * 100}%)` }}>

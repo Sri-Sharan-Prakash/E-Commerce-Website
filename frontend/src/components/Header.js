@@ -183,9 +183,9 @@ const Header = () => {
                         <IconButton onClick={() => setMenuDisplay(prev => !prev)} ariaLabel="User menu">
                             {user?.profilePic ? (
                                 <img src={user.profilePic} className='w-8 h-8 rounded-full object-cover' alt={user.name} />
-                            ) : (
-                                <FaUserCircle size={28}/>
-                            )}
+                            ) : user?
+                                <FaUserCircle size={28}/>:""
+                            }
                         </IconButton>
                         {menuDisplay && user && <UserMenu user={user} onLogout={handleLogout} onClose={() => setMenuDisplay(false)} />}
                     </div>

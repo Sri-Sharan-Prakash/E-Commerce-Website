@@ -1,7 +1,7 @@
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 
-const addToCart = async (productId, quantity) => {
+const addToCart = async (e, productid) => {
 
     try {
         const response = await fetch(SummaryApi.addToCartProduct.url, {
@@ -11,8 +11,7 @@ const addToCart = async (productId, quantity) => {
                 "content-type": "application/json"
             },
             body: JSON.stringify({
-                productId: productId,
-                quantity: quantity 
+                productId: productid,
             })
         });
 

@@ -27,14 +27,14 @@ const ProductCard = ({ product, onAddToCart }) => {
             </div>
             <div className='p-4 flex flex-col gap-2'>
                 <h2 className='font-semibold text-slate-800 text-lg text-ellipsis line-clamp-1' title={product.productName}>{product.productName}</h2>
-                <p className='capitalize text-slate-500 -mt-1'>{product.category} hi</p>
+                <p className='capitalize text-slate-500 -mt-1'>{product.category}</p>
                 <div className='flex items-center gap-2'>
                     <p className='text-red-600 font-bold text-lg'>{displayINRCurrency(product.sellingPrice)}</p>
                     <p className='text-slate-500 line-through text-sm'>{displayINRCurrency(product.price)}</p>
                 </div>
                 {/* Add to Cart Button - appears on hover */}
                 <button 
-                    className='w-full text-white bg-red-600 hover:bg-red-700 py-2 rounded-lg font-semibold transition-all duration-300 transform translate-y-full group-hover:translate-y-0' 
+                    className='w-full text-white bg-red-600 hover:bg-red-700 py-2 rounded-lg font-semibold transition-all duration-300 transform translate-y-96 group-hover:translate-y-0' 
                     onClick={(e) => onAddToCart(e, product._id)}
                 >
                     Add to Cart
